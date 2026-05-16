@@ -142,6 +142,36 @@ Python 베이스 이미지: `python:3.12-slim`
 
 ---
 
+## 환경 변수 & 보안 규약
+
+본 보일러플레이트는 환경 변수를 **두 파일 짝** 으로 운영한다. 운영 세부는 [`GUIDELINE.md`](GUIDELINE.md) §8 참조.
+
+| 파일 | git 추적 | 용도 |
+|---|---|---|
+| `.env` | ❌ (`.gitignore` 적용) | 로컬/서버에 채워 넣는 **실제 값**. 절대 외부 노출 금지. |
+| `.env.example` | ✅ | 키 인터페이스 템플릿. 값은 `<change-me>` 또는 공개 가능한 기본값만. |
+
+### 핵심 규칙 (요약)
+
+1. **`.env` 는 절대 노출하지 않는다.** git 커밋·로그·채팅·AI 프롬프트 어디에도 실제 값 금지.
+2. **배포본에는 `.env.example` 만 함께 나간다.** 따라서 `.env` 와 `.env.example` 은 **항상 동일한 키 인터페이스** 를 유지해야 한다. 한쪽에만 키가 있으면 배포본이 부팅에 실패한다.
+3. **`.env` 에 키를 추가/삭제/이름변경하면 즉시 `.env.example` 에도 동일하게 반영한다.** 순서: `.env.example` 에 키 + `<change-me>` 먼저 → `.env` 에 실제 값 → 코드에서 그 키만 참조.
+4. **보안 정보(JWT 시크릿, DB 비밀번호, API 키, OAuth 토큰 등) 는 절대 하드코딩하지 않는다.** 소스·`docker-compose.yml`·`nginx.conf` 어디에서도 평문 금지. **반드시** `.env` 값을 `os.getenv()` / `import.meta.env` / `process.env` / `${VAR}` 보간으로 참조한다.
+
+### 빠른 시작
+
+```bash
+# 1) 템플릿 복사
+cp .env.example .env
+
+# 2) <change-me> 항목을 실제 값으로 채운다 (강한 랜덤 값 권장)
+#    예: openssl rand -hex 32
+
+# 3) 새 비밀이 필요해질 때마다 양쪽 파일에 동시에 키 추가
+```
+
+---
+
 ## 디렉터리 골격 (이 보일러플레이트가 제공하는 부분)
 
 ```
@@ -150,6 +180,8 @@ Doness/
 ├── GUIDELINE.md              # AI 운용 규칙 (로컬 전용)
 ├── README.md                 # 이 파일 (사용자 시점, git 커밋)
 ├── .gitignore
+├── .env.example              # 환경 변수 키 인터페이스 (git 커밋)
+├── .env                      # 실제 값 (.gitignore — 절대 노출 금지)
 └── ai-docs/                  # AI 컨텍스트 (로컬 전용, git ignore)
     ├── INDEX.md              # 산출물 지도
     ├── context/
@@ -170,11 +202,12 @@ Doness/
 프로젝트를 시작할 때 클론 받고:
 
 1. **`.gitignore` 활성화** — 파일 하단의 `GUIDELINE.md` / `skill.md` / `ai-docs/` 3줄 주석을 해제하여 AI 컨텍스트 산출물을 git 추적에서 제외한다. (보일러플레이트 저장소 자체는 골격 제공을 위해 추적 유지)
-2. `ai-docs/spec/` 에 프로젝트 명세를 적는다.
-3. `ai-docs/context/current.md` 의 마지막 갱신 / 활성 태스크를 채운다.
-4. `docker-compose.yml` 를 GW/FE/BE/DB/wiki 골격으로 작성한다.
-5. `wiki/` 디렉터리를 만들어 Docusaurus 를 초기화한다.
-6. 첫 활성 태스크를 `ai-docs/task/active/${YYMMDD}_${title}.md` 로 시작한다.
+2. **환경 변수 세팅** — `cp .env.example .env` 후 `<change-me>` 항목을 실제 값으로 채운다. 이후 키 변경 시 양쪽 파일을 동시에 갱신한다.
+3. `ai-docs/spec/` 에 프로젝트 명세를 적는다.
+4. `ai-docs/context/current.md` 의 마지막 갱신 / 활성 태스크를 채운다.
+5. `docker-compose.yml` 를 GW/FE/BE/DB/wiki 골격으로 작성한다. 시크릿은 모두 `${VAR}` 보간으로 `.env` 참조.
+6. `wiki/` 디렉터리를 만들어 Docusaurus 를 초기화한다.
+7. 첫 활성 태스크를 `ai-docs/task/active/${YYMMDD}_${title}.md` 로 시작한다.
 
 ---
 
