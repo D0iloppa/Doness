@@ -78,3 +78,22 @@ docker compose --env-file .env up --build -d
 6. **AI 와 대화할 때** — 실제 비밀 값을 프롬프트에 붙여 넣지 않는다. 필요한 경우 `.env.example` 의 키 이름만 공유한다.
 
 위반을 발견하면 즉시 (a) 비밀 회전, (b) git 히스토리 정리(`git filter-repo` 등), (c) 외부 노출 경위 추적 순으로 대응한다.
+
+## 9. 린터
+
+코드 품질은 린터로 자동 관리한다. 린터 도입 시 아래 규칙을 따른다.
+
+### 도구 선정 기준
+
+| 영역 | 도구 | 비고 |
+|---|---|---|
+| Frontend (TS/React) | ESLint v9 (flat config) | `eslint.config.js` |
+| Backend (Python/FastAPI) | ruff | `pyproject.toml` `[tool.ruff]` |
+| Git hook | pre-commit | `.pre-commit-config.yaml` |
+
+### 규칙
+
+1. **커밋 전 린트 통과 필수** — `pre-commit` 훅으로 자동 실행. error 0건이어야 커밋 가능. warning은 점진적으로 제거.
+2. **새 규칙 추가 시** — 설정 파일에 규칙 추가 → 기존 코드 위반을 먼저 정리(auto-fix 우선) → 커밋.
+3. **프로젝트 특화 ignore** — SQLAlchemy `== True` 패턴(`E712`), FastAPI `Depends` 패턴(`B008`) 등 프레임워크 관용구는 ignore에 등록. 새 프레임워크 패턴이 충돌하면 동일하게 처리.
+4. **린터 도입 시점** — 코드베이스 복잡도가 증가하거나 다수 파일에 걸친 변경이 잦아지면 즉시 도입. Saigon Rider 프로젝트의 설정(`eslint.config.js`, `pyproject.toml [tool.ruff]`)을 기반으로 프로젝트 상황에 맞게 조정.

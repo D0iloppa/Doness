@@ -128,6 +128,7 @@ Python 베이스 이미지: `python:3.12-slim`
 - `postgres:15` (필요 시 `postgis/postgis:15-3.4`)
 - 초기 스키마는 `database/init/${NNN}_${title}.sql` 순번 적용
 - 컨테이너 최초 기동 시 `/docker-entrypoint-initdb.d/` 가 파일명 순서대로 실행
+- `__DEV` prefix 테이블로 프로젝트 진행 상태 관리 (아래 [__DEV Context 관리](#__dev-context-관리) 참조)
 
 ### Gateway
 
@@ -172,6 +173,38 @@ cp .env.example .env
 
 ---
 
+## __DEV Context 관리
+
+프로젝트 진행 상태(현재 스프린트·기능 목록·할일)를 **PostgreSQL DB** 에서 관리하여, 어드민 콘솔·위키·AI 컨텍스트에서 실시간으로 참조할 수 있게 한다.
+
+### 왜 DB인가
+
+md 파일 기반 추적은 갱신이 누락되기 쉽고 여러 소비자(위키·어드민·AI)가 동시에 읽기 어렵다. DB를 SoT(Source of Truth)로 두면:
+- 어드민 콘솔에서 한 클릭으로 상태 순환
+- 위키 홈에서 실시간 진행률 표시 (API fetch, 재빌드 불필요)
+- AI가 API로 현재 상태를 즉시 파악
+
+### `__DEV` prefix 규약
+
+서비스 테이블과 혼동을 방지하기 위해 **`__DEV_` prefix** 를 사용한다.
+
+| 테이블 | 역할 |
+|---|---|
+| `__DEV_context` | Key-Value 저장소 (현재 스프린트, 포커스, 블로커 등) |
+| `__DEV_features` | 기능 목록 (카테고리별, 상태: PLANNED → IN_PROGRESS → DONE / DEFERRED) |
+| `__DEV_todos` | 할일 관리 (우선순위: URGENT~LOW, 상태: TODO → IN_PROGRESS → DONE / BLOCKED) |
+
+### 적용 방법
+
+1. **테이블 생성**: `database/init/900_dev_context.sql` 을 DB 초기화 스크립트에 포함하거나 직접 실행
+2. **시드 데이터**: `database/init/901_dev_context_seed.sql` 의 카테고리·기능명·할일을 프로젝트에 맞게 수정 후 실행
+3. **백엔드 라우터**: API(`/api/dev/*`) + 어드민 HTML(`/admin/dev`) 라우터 구현
+4. **위키 컴포넌트**: `/api/dev/summary` 를 fetch하여 CLI 스타일 프로그레스 표시
+
+900번대 번호를 사용하여 서비스 마이그레이션(001~)과 분리한다. 상세 운영 절차는 [`ai-docs/workflow/dev-context-management.md`](ai-docs/workflow/dev-context-management.md) 참조.
+
+---
+
 ## 디렉터리 골격 (이 보일러플레이트가 제공하는 부분)
 
 ```
@@ -182,6 +215,10 @@ Doness/
 ├── .gitignore
 ├── .env.example              # 환경 변수 키 인터페이스 (git 커밋)
 ├── .env                      # 실제 값 (.gitignore — 절대 노출 금지)
+├── database/
+│   └── init/
+│       ├── 900_dev_context.sql       # __DEV 테이블 생성
+│       └── 901_dev_context_seed.sql  # __DEV 시드 데이터 (템플릿)
 └── ai-docs/                  # AI 컨텍스트 (로컬 전용, git ignore)
     ├── INDEX.md              # 산출물 지도
     ├── context/
@@ -190,6 +227,7 @@ Doness/
     ├── workflow/
     │   ├── README.md         # 워크플로우 인덱스
     │   ├── project-todo-management.md
+    │   ├── dev-context-management.md  # __DEV Context 현행화 절차
     │   └── wiki-update.md    # 사람 산출물 발행 절차
     ├── task/
     │   ├── active/           # 진행 중 태스크

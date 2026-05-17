@@ -18,6 +18,7 @@
 - [워크플로우 인덱스](workflow/README.md) — 등록된 워크플로우 목록
 - [Project TODO 관리](workflow/project-todo-management.md) — `project_todo.md` 등록·착수·완료 아카이빙·보류 절차
 - [Docusaurus 위키 현행화](workflow/wiki-update.md) — 사람 산출물 발행 절차
+- [__DEV Context 현행화](workflow/dev-context-management.md) — DB 기반 진행 상태 관리 (Feature·Todo·Context), `__DEV` prefix 테이블 규약
 
 ## 📦 태스크 / 트러블슈팅 이력
 
