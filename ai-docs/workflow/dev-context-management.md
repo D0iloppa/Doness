@@ -7,13 +7,40 @@
 
 ---
 
+## ⚠ 선 보고 후 진행 (Report First, Fix Later)
+
+외부 사용자가 `current_focus` 등 Context 값을 통해 실시간으로 진행 상태를 추적한다. 따라서 **IN_PROGRESS(진행중)와 DONE(완료)은 반드시 구분**해야 한다.
+
+### Context status 이모지
+
+`__DEV_context` 테이블의 `status` 컬럼은 이모지로 시각적 상태를 표시한다. 어드민에서 ↻ 버튼으로 순환 가능.
+
+| 이모지 | 의미 | 용도 |
+|--------|------|------|
+| 🔧 | 진행중 | 작업 착수 시 설정 |
+| ✅ | 완료 | 검증 완료 후 전환 |
+| ⏸ | 대기/기본 | 초기 상태 또는 보류 |
+| ❌ | 취소/실패 | 작업 취소 또는 실패 시 |
+
+### 갱신 순서
+
+| 순서 | 시점 | 조치 |
+|------|------|------|
+| 1 | 작업 **착수 전** | `current_focus` value 갱신 + status를 🔧로 설정 |
+| 2 | 코드 수정 | 실제 구현 수행 |
+| 3 | 검증 완료 **후** | status를 ✅로 전환. Feature/Todo 상태도 DONE 전환 |
+
+**절대 금지**: 구현과 동시에 ✅ 처리. 검증 전에는 항상 🔧 상태를 유지한다.
+
+---
+
 ## 테이블 구조
 
 `__DEV` prefix를 사용하여 서비스 테이블과 명확히 분리한다. SQL은 `database/init/900_dev_context.sql` 참조.
 
 | 테이블 | 역할 |
 |---|---|
-| `__DEV_context` | Key-Value 저장소. 현재 스프린트·포커스·블로커 등 한 줄 요약 |
+| `__DEV_context` | Key-Value 저장소 + `status` 이모지(🔧/✅/⏸/❌). 현재 스프린트·포커스·블로커 등 한 줄 요약 |
 | `__DEV_features` | 기능 목록. 카테고리별 그룹, 상태(PLANNED/IN_PROGRESS/DONE/DEFERRED) 추적 |
 | `__DEV_todos` | 할일 관리. 우선순위(URGENT~LOW), 상태(TODO/IN_PROGRESS/DONE/BLOCKED), Feature 연결 |
 
@@ -151,7 +178,7 @@ TODO → IN_PROGRESS → DONE
 
 - DB 갱신 즉시 위키에 반영 (위키 재빌드 불필요)
 - API 서버 미기동 시 프로그레스 영역이 자동 숨김 (graceful degradation)
-- 위키 컴포넌트 구현은 Saigon Rider의 `DevProgress.tsx`를 참고
+- 위키 컴포넌트는 `/api/dev/summary` 를 fetch하여 프로그레스를 렌더링하는 React 컴포넌트로 구현
 
 ---
 

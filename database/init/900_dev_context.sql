@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS "__DEV_context" (
   id          SERIAL PRIMARY KEY,
   key         VARCHAR(100) NOT NULL UNIQUE,
   value       TEXT,
+  status      VARCHAR(10) DEFAULT '⏸',
   meta        JSONB,
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

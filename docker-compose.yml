@@ -1,0 +1,95 @@
+networks:
+  app-net:
+    driver: bridge
+    name: ${NETWORK_BRIDGE}
+
+volumes:
+  db_data:
+
+services:
+
+  # -- Gateway (Nginx Reverse Proxy) -----------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-doness}_gw
+    ports:
+      - "${NGINX_PORT}:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    networks:
+      - app-net
+    depends_on:
+      - frontend
+    environment:
+      - WIKI_AUTH_USER=${WIKI_AUTH_USER:-admin}
+      - WIKI_AUTH_PASS=${WIKI_AUTH_PASS:-changeme}
+    restart: unless-stopped
+
+  # -- Frontend (React + Vite -> nginx static) --------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-doness}_fe
+    networks:
+      - app-net
+    restart: unless-stopped
+
+  # -- Backend (FastAPI) ------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-doness}_be
+    profiles: [backend]
+    ports:
+      - "${BACKEND_PORT}:8080"
+    volumes:
+      - ./backend:/app
+    networks:
+      - app-net
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@database:5432/${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - BACKEND_PUBLIC_URL=${BACKEND_PUBLIC_URL}
+      - APP_TIMEZONE=${APP_TIMEZONE:-Asia/Seoul}
+      - TZ=${APP_TIMEZONE:-Asia/Seoul}
+    restart: unless-stopped
+
+  # -- Database (PostgreSQL) --------------------------------------------------
+  database:
+    image: postgres:15
+    container_name: ${COMPOSE_PROJECT_NAME:-doness}_db
+    profiles: [backend]
+    ports:
+      - "${DB_PORT_HOST}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-net
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # -- Wiki (Docusaurus) ------------------------------------------------------
+  wiki:
+    build:
+      context: ./wiki
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-doness}_wiki
+    profiles: [wiki]
+    networks:
+      - app-net
+    restart: unless-stopped

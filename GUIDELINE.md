@@ -79,7 +79,27 @@ docker compose --env-file .env up --build -d
 
 위반을 발견하면 즉시 (a) 비밀 회전, (b) git 히스토리 정리(`git filter-repo` 등), (c) 외부 노출 경위 추적 순으로 대응한다.
 
-## 9. 린터
+## 9. __DEV Context (진행 상태 관리)
+
+프로젝트 진행 상태는 DB(`__DEV_context`, `__DEV_features`, `__DEV_todos`)로 관리하며, 외부 사용자가 위키·어드민에서 실시간 추적한다. 상세 절차는 [`ai-docs/workflow/dev-context-management.md`](ai-docs/workflow/dev-context-management.md).
+
+**핵심 용어**
+
+| 테이블 | 역할 |
+|--------|------|
+| `__DEV_context` | Key-Value 저장소 + `status` 이모지(🔧진행중/✅완료/⏸대기/❌취소) — `current_focus`, `current_sprint`, `last_deploy`, `blocker`, `next_milestone` |
+| `__DEV_features` | 기능 단위 진행 상태 — `PLANNED → IN_PROGRESS → DONE / DEFERRED` |
+| `__DEV_todos` | 할일 단위 — `TODO → IN_PROGRESS → DONE / BLOCKED` |
+
+**선 보고 후 진행 (Report First, Fix Later)**
+
+1. 작업 **착수 전** `current_focus`를 진행중 상태로 갱신한다.
+2. 코드 수정을 수행한다.
+3. 검증 완료 **후** 완료 상태로 갱신하거나 다음 작업으로 교체한다.
+
+IN_PROGRESS와 DONE을 혼동하지 않는다. 구현과 동시에 DONE 처리 금지.
+
+## 10. 린터
 
 코드 품질은 린터로 자동 관리한다. 린터 도입 시 아래 규칙을 따른다.
 
@@ -96,4 +116,4 @@ docker compose --env-file .env up --build -d
 1. **커밋 전 린트 통과 필수** — `pre-commit` 훅으로 자동 실행. error 0건이어야 커밋 가능. warning은 점진적으로 제거.
 2. **새 규칙 추가 시** — 설정 파일에 규칙 추가 → 기존 코드 위반을 먼저 정리(auto-fix 우선) → 커밋.
 3. **프로젝트 특화 ignore** — SQLAlchemy `== True` 패턴(`E712`), FastAPI `Depends` 패턴(`B008`) 등 프레임워크 관용구는 ignore에 등록. 새 프레임워크 패턴이 충돌하면 동일하게 처리.
-4. **린터 도입 시점** — 코드베이스 복잡도가 증가하거나 다수 파일에 걸친 변경이 잦아지면 즉시 도입. Saigon Rider 프로젝트의 설정(`eslint.config.js`, `pyproject.toml [tool.ruff]`)을 기반으로 프로젝트 상황에 맞게 조정.
+4. **린터 도입 시점** — 코드베이스 복잡도가 증가하거나 다수 파일에 걸친 변경이 잦아지면 즉시 도입. ESLint v9 flat config + ruff 조합을 기반으로 프로젝트 상황에 맞게 조정.

@@ -55,7 +55,7 @@
 
 ## 발행 스크립트 옵션 (예시)
 
-> 보일러플레이트에는 스크립트 본체가 포함되어 있지 않다. 프로젝트 초기화 시 saigon-rider 의 `wikidoc_publish.sh` 를 참고하여 작성한다.
+> 프로젝트 루트의 `wikidoc_publish.sh` 를 사용한다. 동기화 매핑은 프로젝트에 맞게 스크립트 내부에서 정의한다.
 
 ```bash
 ./wikidoc_publish.sh              # 자동 동기화 + 무중단 발행
